@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Cloud Guy Midterm + Text Box",
+  "version": "1.0",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["Content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["*.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
