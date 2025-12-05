@@ -1,3 +1,7 @@
+/* ---------------------------------------------------
+   This function detects if the website you are on is a shopping site. 
+   This is sometimes triggered on non-shopping sites as well if you try to shop, just to remind you of what you are about to do as well
+--------------------------------------------------- */
 function isShoppingSite() {
   const bodyText = document.body.innerText.toLowerCase();
 
@@ -9,9 +13,7 @@ function isShoppingSite() {
   const keywordHit = shoppingKeywords.some(k => bodyText.includes(k));
 
   const buttons = [...document.querySelectorAll("button, a, input")];
-  const classHit = buttons.some(b =>
-    /(add|cart|bag|basket|buy|checkout)/i.test(b.className)
-  );
+  const classHit = buttons.some(b => /(add|cart|bag|basket|buy|checkout)/i.test(b.className));
 
   const urlHit = /(product|item|cart|checkout|shop)/.test(location.pathname.toLowerCase());
 
@@ -30,7 +32,7 @@ function isShoppingSite() {
 
 
 /* ---------------------------------------------------
-   IMAGE SETS
+   Cloud Guy Level Characters and Matching Speech Bubbles sets
 --------------------------------------------------- */
 const baseImages = [
   "ems0.png", "ems1.png", "ems2.png", "ems3.png", "ems4.png",
@@ -43,161 +45,177 @@ const tbImages = [
 ];
 
 let currentImageIndex = 0;
-let activeImageElement = null;
-let activeTBImage = null;
+let activeImage = null;
+let activeBubble = null;
+
+
+/* ---------------------------------------------------
+   Weather effects -- determine if there is an associated weather effect
+--------------------------------------------------- */
+const weatherMode = {
+  0: "blank",
+  1: "waterdrop",
+  2: "lightning",
+  3: "waterdrop",
+  4: "blank",
+  5: "waterdrop",
+  6: "lightning",
+  7: "blank",
+  8: "waterdrop",
+  9: "lightning",
+  10: "waterdrop"
+};
 
 
 
 /* ---------------------------------------------------
-   POPUP IMAGE CREATOR
+   Show cloud guy emissions image top right, near the shopping cart
 --------------------------------------------------- */
-function createPopupImage(filename, options = {}) {
-  const img = document.createElement("img");
-  img.src = chrome.runtime.getURL(filename);
+function showEMS(filename) {
+  if (!activeImage) {
+    activeImage = document.createElement("img");
+    Object.assign(activeImage.style, {
+      position: "fixed",
+      right: "20px",
+      top: "20px",
+      width: "100px",
+      pointerEvents: "none",
+      opacity: "0",
+      transition: "opacity .5s",
+      zIndex: "9999"
+    });
+    document.body.appendChild(activeImage);
+  }
 
-  Object.assign(img.style, {
+  activeImage.src = chrome.runtime.getURL(filename);
+  /* 
+  https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame 
+  https://www.reddit.com/r/html5/comments/8yv538/windowrequestanimationframe_need_more_explanation/
+  */
+  
+  requestAnimationFrame(() => activeImage.style.opacity = "1");
+}
+
+
+
+/* ---------------------------------------------------
+   Show the speech bubbles for Cloud guy for 4 seconds 
+--------------------------------------------------- */
+function showBubble(index) {
+  const file = tbImages[index - 1];
+  if (!file) return;
+
+  if (activeBubble) activeBubble.remove();
+
+  const bubble = document.createElement("img");
+  bubble.src = chrome.runtime.getURL(file);
+
+  Object.assign(bubble.style, {
     position: "fixed",
-    right: options.right || "20px",
-    top: options.top || "20px",
-    width: options.width || "100px",
-    height: "auto",
+    right: "130px",
+    top: "60px",
+    width: "200px",
     opacity: "0",
-    borderRadius: "8px",
-    zIndex: options.zIndex || "9999",
+    transition: "opacity .4s",
     pointerEvents: "none",
-    transition: "opacity 0.6s ease"
+    zIndex: "10000"
   });
 
-  document.body.appendChild(img);
-  requestAnimationFrame(() => (img.style.opacity = options.opacity || "0.8"));
-  return img;
-}
+  document.body.appendChild(bubble);
+  requestAnimationFrame(() => bubble.style.opacity = "1");
 
-
-
-/* ---------------------------------------------------
-   MAIN IMAGE UPDATE
---------------------------------------------------- */
-function updateDisplayedImage(showTB = true) {
-  const chosenImage = baseImages[currentImageIndex];
-
-  if (!activeImageElement) {
-    activeImageElement = createPopupImage(chosenImage, { width: "100px" });
-  } else {
-    activeImageElement.src = chrome.runtime.getURL(chosenImage);
-  }
-
-  localStorage.setItem("currentImageIndex", currentImageIndex);
-
-  if (showTB) {
-    showTemporaryTBImage(currentImageIndex);
-  }
-}
-
-
-
-/* ---------------------------------------------------
-   TEMPORARY TB OVERLAY
---------------------------------------------------- */
-function showTemporaryTBImage(index) {
-  const tbFile = tbImages[index - 1];
-  if (!tbFile) return;
-
-  if (activeTBImage) {
-    activeTBImage.remove();
-    activeTBImage = null;
-  }
-
-  const ratio = 1792 / 454;
-  const tbWidth = 100 * ratio;
-
-  activeTBImage = createPopupImage(tbFile, {
-    width: tbWidth + "px",
-    zIndex: "10000",
-    opacity: 0.9
-  });
+  activeBubble = bubble;
 
   setTimeout(() => {
-    if (activeTBImage) {
-      activeTBImage.style.opacity = "0";
-      setTimeout(() => activeTBImage?.remove(), 600);
-      activeTBImage = null;
-    }
-  }, 5000);
+    bubble.style.opacity = "0";
+    setTimeout(() => bubble.remove(), 500);
+  }, 4000);
 }
 
 
 
+/* ---------------------------------------------------
+   Weather Effects (Right-Side Only)
+   - water drops
+   - lightning
+   - blank = nothing
+--------------------------------------------------- */
+let activeWeather = null;
 
-
-/* ===================================================
-   🌧️ RAINFALL ENGINE (SUPER EASY TO UPDATE)
-   - update pattern file, speed, size below
-=================================================== */
-let activeRainOverlay = null;
-
-// Inject keyframes ONCE
-const rainStyle = document.createElement("style");
-rainStyle.textContent = `
-@keyframes rainFallAnim {
+// keyframes
+const style = document.createElement("style");
+style.textContent = `
+@keyframes rainScroll {
   from { background-position-y: 0; }
-  to   { background-position-y: 1500px; } /* adjust fall distance */
+  to   { background-position-y: 800px; }
+}
+
+@keyframes lightningFlash {
+  0%, 100% { opacity: 0; }
+  30% { opacity: .9; }
+  60% { opacity: .2; }
 }
 `;
-document.head.appendChild(rainStyle);
+document.head.appendChild(style);
 
-// Call this to trigger rainfall
-function triggerRain(pattern = "waterdrops.png") {
-  if (activeRainOverlay) {
-    activeRainOverlay.remove();
-    activeRainOverlay = null;
-  }
+function showWeather(mode) {
+  if (activeWeather) activeWeather.remove();
+  if (mode === "blank") return;
 
   const div = document.createElement("div");
-  div.style.position = "fixed";
-  div.style.top = "0";
-  div.style.left = "0";
-  div.style.width = "100vw";
-  div.style.height = "100vh";
-  div.style.pointerEvents = "none";
-  div.style.zIndex = "999999";
-  div.style.opacity = "0";
-  div.style.transition = "opacity 0.4s ease";
 
-  div.style.backgroundImage = `url(${chrome.runtime.getURL(pattern)})`;
-  div.style.backgroundRepeat = "repeat";
-  div.style.backgroundSize = "300px auto";   // 🌧 adjust pattern size
-  div.style.animation = "rainFallAnim 5s linear forwards";
+  Object.assign(div.style, {
+    position: "fixed",
+    top: "130px",
+    right: "20px",
+    width: "120px",
+    height: "350px",
+    pointerEvents: "none",
+    opacity: "0",
+    transition: "opacity .4s",
+    zIndex: "9998",
+  });
+
+  if (mode === "waterdrop") {
+    div.style.backgroundImage = `url(${chrome.runtime.getURL("waterdrops.png")})`;
+    div.style.backgroundRepeat = "repeat";
+    div.style.backgroundSize = "120px auto";
+    div.style.animation = "rainScroll 5s linear";
+  }
+
+  if (mode === "lightning") {
+    div.style.backgroundImage = `url(${chrome.runtime.getURL("lightning.png")})`;
+    div.style.backgroundSize = "cover";
+    div.style.animation = "lightningFlash 1s ease-in-out infinite";
+  }
 
   document.body.appendChild(div);
-  requestAnimationFrame(() => (div.style.opacity = "0.9"));
+  requestAnimationFrame(() => (div.style.opacity = "1"));
 
-  activeRainOverlay = div;
+  activeWeather = div;
 
+  // Remove after 5 sec
   setTimeout(() => {
     div.style.opacity = "0";
-    setTimeout(() => div.remove(), 500);
+    setTimeout(() => div.remove(), 400);
   }, 5000);
 }
 
 
 
 /* ---------------------------------------------------
-   INITIAL LOAD
+   Load cloudguy when we reach a shopping website
 --------------------------------------------------- */
 if (isShoppingSite()) {
-  const savedIndex = parseInt(localStorage.getItem("currentImageIndex"), 10);
-  currentImageIndex = isNaN(savedIndex)
-    ? 0
-    : Math.min(savedIndex, baseImages.length - 1);
-
-  activeImageElement = createPopupImage(baseImages[currentImageIndex], { width: "100px" });
+  const saved = Number(localStorage.getItem("currentImageIndex"));
+  currentImageIndex = isNaN(saved) ? 0 : saved;
+  showEMS(baseImages[currentImageIndex]);
 }
 
 
 
 /* ---------------------------------------------------
-   CLICK HANDLING
+   CLICK LISTENER (Add / Remove)
 --------------------------------------------------- */
 document.addEventListener("click", (e) => {
   if (!isShoppingSite()) return;
@@ -207,24 +225,37 @@ document.addEventListener("click", (e) => {
 
   const text = (button.textContent || "").toLowerCase();
   const aria = (button.getAttribute("aria-label") || "").toLowerCase();
-  const classes = (button.className || "").toLowerCase();
+  const cls  = (button.className || "").toLowerCase();
 
-  const addKeywords = ["add to cart", "add to bag", "buy now", "purchase", "add", "shop now", "order now", "+"];
-  const removeKeywords = ["remove", "minus"];
+  const addWords = ["add to cart", "add to bag", "buy now", "purchase", "shop now", "order now", "add", "+"];
+  const delWords = ["remove", "minus"];
 
-  const isAdd = addKeywords.some(w => text.includes(w) || aria.includes(w) || classes.includes(w));
-  const isRemove = removeKeywords.some(w => text.includes(w) || aria.includes(w) || classes.includes(w));
+  const isAdd = addWords.some(w => text.includes(w) || aria.includes(w) || cls.includes(w));
+  const isDel = delWords.some(w => text.includes(w) || aria.includes(w) || cls.includes(w));
 
+
+  /* ADD button increases the level of cloud guy up + bubble + weather effect */
   if (isAdd) {
     currentImageIndex = Math.min(currentImageIndex + 1, baseImages.length - 1);
-    updateDisplayedImage(true);
-  
+    showEMS(baseImages[currentImageIndex]);
+    showBubble(currentImageIndex);
 
-    // 🌧 TRIGGER RAINFALL HERE
-    triggerRain("waterdrops.png");
+    // 🌧 WEATHER MODE per EMS number
+    const mode = weatherMode[currentImageIndex];
+    showWeather(mode);
 
-  } else if (isRemove) {
+    localStorage.setItem("currentImageIndex", currentImageIndex);
+  }
+
+
+  /* REMOVE → EMS level down */
+  if (isDel) {
     currentImageIndex = Math.max(currentImageIndex - 1, 0);
-    updateDisplayedImage(false);
+    showEMS(baseImages[currentImageIndex]);
+
+    const mode = weatherMode[currentImageIndex];
+    showWeather(mode);
+
+    localStorage.setItem("currentImageIndex", currentImageIndex);
   }
 });
