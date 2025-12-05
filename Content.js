@@ -88,10 +88,6 @@ function showEMS(filename) {
   }
 
   activeImage.src = chrome.runtime.getURL(filename);
-  /* 
-  https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame 
-  https://www.reddit.com/r/html5/comments/8yv538/windowrequestanimationframe_need_more_explanation/
-  */
   
   requestAnimationFrame(() => activeImage.style.opacity = "1");
 }
@@ -135,19 +131,27 @@ function showBubble(index) {
 
 
 /* ---------------------------------------------------
-   Weather Effects (Right-Side Only)
+   Weather Effects 
    - water drops
    - lightning
    - blank = nothing
 --------------------------------------------------- */
-let activeWeather = null;
 
-// keyframes
+//stores the currently active weather div so it can be removed before creating more things later
+let activeWeather = null; 
+
+
+
+/* ---------------------------------------------------
+   KEYFRAME ANIMATIONS
+   (this section was done with help from ChatGPT)
+--------------------------------------------------- */
 const style = document.createElement("style");
 style.textContent = `
+/* ## ADDED — rain now uses a CSS variable for auto-scaling */
 @keyframes rainScroll {
   from { background-position-y: 0; }
-  to   { background-position-y: 800px; }
+  to   { background-position-y: var(--rain-distance); } /* ## ADDED */
 }
 
 @keyframes lightningFlash {
@@ -158,10 +162,16 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-function showWeather(mode) {
+
+
+function showWeather(mode, clickX = null, clickY = null) { /* ## ADDED click coords */
+
+  // Remove previous weather 
   if (activeWeather) activeWeather.remove();
+
   if (mode === "blank") return;
 
+  // Create the small right-side effect panel
   const div = document.createElement("div");
 
   Object.assign(div.style, {
@@ -173,9 +183,32 @@ function showWeather(mode) {
     pointerEvents: "none",
     opacity: "0",
     transition: "opacity .4s",
-    zIndex: "9998",
+    zIndex: "9998"
   });
 
+  /* ---------------------------------------------------
+     ## ADDED — AUTO SCALE RAIN DISTANCE
+  --------------------------------------------------- */
+  const panelHeight = 350;                  /* ## ADDED */
+  const rainDistance = panelHeight * 4;     /* ## ADDED */
+  div.style.setProperty("--rain-distance", rainDistance + "px"); /* ## ADDED */
+
+
+
+  /* ---------------------------------------------------
+     ## ADDED — lightning appears where you click
+  --------------------------------------------------- */
+  if (mode === "lightning" && clickX !== null && clickY !== null) { /* ## ADDED */
+    div.style.top = (clickY - 175) + "px";  /* center 350px panel */ /* ## ADDED */
+    div.style.left = (clickX - 60) + "px";  /* center 120px panel */ /* ## ADDED */
+    div.style.right = "unset";              /* stop locking to EMS side */ /* ## ADDED */
+  }
+
+
+
+  /* ---------------------------------------------------
+     WATERDROP MODE
+  --------------------------------------------------- */
   if (mode === "waterdrop") {
     div.style.backgroundImage = `url(${chrome.runtime.getURL("waterdrops.png")})`;
     div.style.backgroundRepeat = "repeat";
@@ -183,18 +216,30 @@ function showWeather(mode) {
     div.style.animation = "rainScroll 5s linear";
   }
 
+
+
+  /* ---------------------------------------------------
+     LIGHTNING MODE
+  --------------------------------------------------- */
   if (mode === "lightning") {
     div.style.backgroundImage = `url(${chrome.runtime.getURL("lightning.png")})`;
     div.style.backgroundSize = "cover";
     div.style.animation = "lightningFlash 1s ease-in-out infinite";
   }
 
+
+
+  // Add to page and fade in
   document.body.appendChild(div);
   requestAnimationFrame(() => (div.style.opacity = "1"));
 
   activeWeather = div;
 
-  // Remove after 5 sec
+
+
+  /* ---------------------------------------------------
+     AUTO-REMOVE
+  --------------------------------------------------- */
   setTimeout(() => {
     div.style.opacity = "0";
     setTimeout(() => div.remove(), 400);
@@ -240,9 +285,8 @@ document.addEventListener("click", (e) => {
     showEMS(baseImages[currentImageIndex]);
     showBubble(currentImageIndex);
 
-    // 🌧 WEATHER MODE per EMS number
     const mode = weatherMode[currentImageIndex];
-    showWeather(mode);
+    showWeather(mode, e.clientX, e.clientY); /* ## ADDED */
 
     localStorage.setItem("currentImageIndex", currentImageIndex);
   }
@@ -254,7 +298,7 @@ document.addEventListener("click", (e) => {
     showEMS(baseImages[currentImageIndex]);
 
     const mode = weatherMode[currentImageIndex];
-    showWeather(mode);
+    showWeather(mode, e.clientX, e.clientY); /* ## ADDED */
 
     localStorage.setItem("currentImageIndex", currentImageIndex);
   }
