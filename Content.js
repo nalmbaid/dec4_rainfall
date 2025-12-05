@@ -144,6 +144,7 @@ let activeWeather = null;
 
 /* ---------------------------------------------------
    KEYFRAME ANIMATIONS
+       ChatGPT helped with setting this animation up - the base image for water rain is a continous pattern
 --------------------------------------------------- */
 const style = document.createElement("style");
 style.textContent = `
@@ -162,19 +163,14 @@ document.head.appendChild(style);
 
 
 
-function showWeather(mode, clickY = null) { // ##added clickY for lightning placement
-
-  // Remove previous weather 
+function showWeather(mode, clickY = null) { 
   if (activeWeather) activeWeather.remove();
-
   if (mode === "blank") return;
-
-  // Create the small right-side effect panel
   const div = document.createElement("div");
 
   Object.assign(div.style, {
     position: "fixed",
-    top: mode === "lightning" && clickY !== null ? clickY + "px" : "130px", // ##added lightning at click
+    top: mode === "lightning" && clickY !== null ? clickY + "px" : "130px", 
     right: "20px",
     width: "120px",
     height: "350px",
@@ -189,6 +185,7 @@ function showWeather(mode, clickY = null) { // ##added clickY for lightning plac
   /* ---------------------------------------------------
      WATERDROP MODE
      - Repeating texture, animates smoothly down
+ 
   --------------------------------------------------- */
   if (mode === "waterdrop") {
     div.style.backgroundImage = `url(${chrome.runtime.getURL("waterdrops.png")})`;
