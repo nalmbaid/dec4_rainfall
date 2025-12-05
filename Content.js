@@ -1,25 +1,20 @@
 function isShoppingSite() {
   const bodyText = document.body.innerText.toLowerCase();
 
-  // 1. Detect common shopping keywords anywhere on the page
   const shoppingKeywords = [
     "add to cart", "add to bag", "add to basket",
     "buy now", "checkout", "free shipping", "in stock",
-    "cart", "bag", "basket",
-    "$", "€", "£"
+    "cart", "bag", "basket"
   ];
   const keywordHit = shoppingKeywords.some(k => bodyText.includes(k));
 
-  // 2. Detect typical button classes 
   const buttons = [...document.querySelectorAll("button, a, input")];
   const classHit = buttons.some(b =>
     /(add|cart|bag|basket|buy|checkout)/i.test(b.className)
   );
 
-  // 3. Detect common ecommerce URL patterns
   const urlHit = /(product|item|cart|checkout|shop)/.test(location.pathname.toLowerCase());
 
-  // 4. Detect JSON-LD product schema (chatgpt help with this one)
   const hasProductSchema = [...document.querySelectorAll('script[type="application/ld+json"]')]
     .some(tag => {
       try {
@@ -29,14 +24,14 @@ function isShoppingSite() {
       } catch { return false; }
     });
 
-  // 
   return keywordHit || classHit || urlHit || hasProductSchema;
 }
 
 
 
-
-// --- Image sets ---
+/* ---------------------------------------------------
+   IMAGE SETS
+--------------------------------------------------- */
 const baseImages = [
   "ems0.png", "ems1.png", "ems2.png", "ems3.png", "ems4.png",
   "ems5.png", "ems6.png", "ems7.png", "ems8.png", "ems9.png", "ems10.png"
@@ -51,7 +46,11 @@ let currentImageIndex = 0;
 let activeImageElement = null;
 let activeTBImage = null;
 
-// --- Create popup image ---
+
+
+/* ---------------------------------------------------
+   POPUP IMAGE CREATOR
+--------------------------------------------------- */
 function createPopupImage(filename, options = {}) {
   const img = document.createElement("img");
   img.src = chrome.runtime.getURL(filename);
@@ -74,7 +73,11 @@ function createPopupImage(filename, options = {}) {
   return img;
 }
 
-// --- Show main image ---
+
+
+/* ---------------------------------------------------
+   MAIN IMAGE UPDATE
+--------------------------------------------------- */
 function updateDisplayedImage(showTB = true) {
   const chosenImage = baseImages[currentImageIndex];
 
@@ -82,18 +85,20 @@ function updateDisplayedImage(showTB = true) {
     activeImageElement = createPopupImage(chosenImage, { width: "100px" });
   } else {
     activeImageElement.src = chrome.runtime.getURL(chosenImage);
-    activeImageElement.style.width = "100px";
   }
 
   localStorage.setItem("currentImageIndex", currentImageIndex);
 
-  // Only show temporary TB if requested
   if (showTB) {
     showTemporaryTBImage(currentImageIndex);
   }
 }
 
-// --- Show temporary TB overlay ---
+
+
+/* ---------------------------------------------------
+   TEMPORARY TB OVERLAY
+--------------------------------------------------- */
 function showTemporaryTBImage(index) {
   const tbFile = tbImages[index - 1];
   if (!tbFile) return;
@@ -115,24 +120,85 @@ function showTemporaryTBImage(index) {
   setTimeout(() => {
     if (activeTBImage) {
       activeTBImage.style.opacity = "0";
-      setTimeout(() => {
-        activeTBImage?.remove();
-        activeTBImage = null;
-      }, 600);
+      setTimeout(() => activeTBImage?.remove(), 600);
+      activeTBImage = null;
     }
   }, 5000);
 }
 
-// --- Initialize on load ---
-if (isShoppingSite()) {
-  const savedIndex = parseInt(localStorage.getItem("currentImageIndex"), 10);
-  currentImageIndex = isNaN(savedIndex) ? 0 : Math.min(savedIndex, baseImages.length - 1);
 
-  activeImageElement = createPopupImage(baseImages[currentImageIndex], { width: "100px" });
-  console.log("Restored image:", baseImages[currentImageIndex]);
+
+
+
+/* ===================================================
+   🌧️ RAINFALL ENGINE (SUPER EASY TO UPDATE)
+   - update pattern file, speed, size below
+=================================================== */
+let activeRainOverlay = null;
+
+// Inject keyframes ONCE
+const rainStyle = document.createElement("style");
+rainStyle.textContent = `
+@keyframes rainFallAnim {
+  from { background-position-y: 0; }
+  to   { background-position-y: 1500px; } /* adjust fall distance */
+}
+`;
+document.head.appendChild(rainStyle);
+
+// Call this to trigger rainfall
+function triggerRain(pattern = "waterdrops.png") {
+  if (activeRainOverlay) {
+    activeRainOverlay.remove();
+    activeRainOverlay = null;
+  }
+
+  const div = document.createElement("div");
+  div.style.position = "fixed";
+  div.style.top = "0";
+  div.style.left = "0";
+  div.style.width = "100vw";
+  div.style.height = "100vh";
+  div.style.pointerEvents = "none";
+  div.style.zIndex = "999999";
+  div.style.opacity = "0";
+  div.style.transition = "opacity 0.4s ease";
+
+  div.style.backgroundImage = `url(${chrome.runtime.getURL(pattern)})`;
+  div.style.backgroundRepeat = "repeat";
+  div.style.backgroundSize = "300px auto";   // 🌧 adjust pattern size
+  div.style.animation = "rainFallAnim 5s linear forwards";
+
+  document.body.appendChild(div);
+  requestAnimationFrame(() => (div.style.opacity = "0.9"));
+
+  activeRainOverlay = div;
+
+  setTimeout(() => {
+    div.style.opacity = "0";
+    setTimeout(() => div.remove(), 500);
+  }, 5000);
 }
 
-// --- Click handling ---
+
+
+/* ---------------------------------------------------
+   INITIAL LOAD
+--------------------------------------------------- */
+if (isShoppingSite()) {
+  const savedIndex = parseInt(localStorage.getItem("currentImageIndex"), 10);
+  currentImageIndex = isNaN(savedIndex)
+    ? 0
+    : Math.min(savedIndex, baseImages.length - 1);
+
+  activeImageElement = createPopupImage(baseImages[currentImageIndex], { width: "100px" });
+}
+
+
+
+/* ---------------------------------------------------
+   CLICK HANDLING
+--------------------------------------------------- */
 document.addEventListener("click", (e) => {
   if (!isShoppingSite()) return;
 
@@ -144,16 +210,21 @@ document.addEventListener("click", (e) => {
   const classes = (button.className || "").toLowerCase();
 
   const addKeywords = ["add to cart", "add to bag", "buy now", "purchase", "add", "shop now", "order now", "+"];
-  const removeKeywords = ["remove", "minus", "-"];
+  const removeKeywords = ["remove", "minus"];
 
-  const isAdd = addKeywords.some(word => text.includes(word) || aria.includes(word) || classes.includes(word));
-  const isRemove = removeKeywords.some(word => text.includes(word) || aria.includes(word) || classes.includes(word));
+  const isAdd = addKeywords.some(w => text.includes(w) || aria.includes(w) || classes.includes(w));
+  const isRemove = removeKeywords.some(w => text.includes(w) || aria.includes(w) || classes.includes(w));
 
   if (isAdd) {
     currentImageIndex = Math.min(currentImageIndex + 1, baseImages.length - 1);
-    updateDisplayedImage(true);   // show TB image
+    updateDisplayedImage(true);
+  
+
+    // 🌧 TRIGGER RAINFALL HERE
+    triggerRain("waterdrops.png");
+
   } else if (isRemove) {
     currentImageIndex = Math.max(currentImageIndex - 1, 0);
-    updateDisplayedImage(false);  // DO NOT show TB image
+    updateDisplayedImage(false);
   }
 });
