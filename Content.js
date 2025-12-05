@@ -148,10 +148,10 @@ let activeWeather = null;
 --------------------------------------------------- */
 const style = document.createElement("style");
 style.textContent = `
-/* ## ADDED — rain now uses a CSS variable for auto-scaling */
+/* ## FIXED — rain auto scales using panel height */
 @keyframes rainScroll {
   from { background-position-y: 0; }
-  to   { background-position-y: var(--rain-distance); } /* ## ADDED */
+  to   { background-position-y: 100%; } /* ## FIXED */
 }
 
 @keyframes lightningFlash {
@@ -164,7 +164,7 @@ document.head.appendChild(style);
 
 
 
-function showWeather(mode, clickX = null, clickY = null) { /* ## ADDED click coords */
+function showWeather(mode, clickX = null, clickY = null) {
 
   // Remove previous weather 
   if (activeWeather) activeWeather.remove();
@@ -187,24 +187,13 @@ function showWeather(mode, clickX = null, clickY = null) { /* ## ADDED click coo
   });
 
   /* ---------------------------------------------------
-     ## ADDED — AUTO SCALE RAIN DISTANCE
+     ## FIXED — lightning appears where you click
   --------------------------------------------------- */
-  const panelHeight = 350;                  /* ## ADDED */
-  const rainDistance = panelHeight * 4;     /* ## ADDED */
-  div.style.setProperty("--rain-distance", rainDistance + "px"); /* ## ADDED */
-
-
-
-  /* ---------------------------------------------------
-     ## ADDED — lightning appears where you click
-  --------------------------------------------------- */
-  if (mode === "lightning" && clickX !== null && clickY !== null) { /* ## ADDED */
-    div.style.top = (clickY - 175) + "px";  /* center 350px panel */ /* ## ADDED */
-    div.style.left = (clickX - 60) + "px";  /* center 120px panel */ /* ## ADDED */
-    div.style.right = "unset";              /* stop locking to EMS side */ /* ## ADDED */
+  if (mode === "lightning" && clickX !== null && clickY !== null) {
+    div.style.top = (clickY - 175) + "px";  // center panel vertically
+    div.style.left = (clickX - 60) + "px";  // center panel horizontally
+    div.style.right = "unset";
   }
-
-
 
   /* ---------------------------------------------------
      WATERDROP MODE
@@ -212,11 +201,9 @@ function showWeather(mode, clickX = null, clickY = null) { /* ## ADDED click coo
   if (mode === "waterdrop") {
     div.style.backgroundImage = `url(${chrome.runtime.getURL("waterdrops.png")})`;
     div.style.backgroundRepeat = "repeat";
-    div.style.backgroundSize = "120px auto";
+    div.style.backgroundSize = "120px 100%";  /* ## FIXED: scale rain to div height */
     div.style.animation = "rainScroll 5s linear";
   }
-
-
 
   /* ---------------------------------------------------
      LIGHTNING MODE
@@ -227,15 +214,11 @@ function showWeather(mode, clickX = null, clickY = null) { /* ## ADDED click coo
     div.style.animation = "lightningFlash 1s ease-in-out infinite";
   }
 
-
-
   // Add to page and fade in
   document.body.appendChild(div);
   requestAnimationFrame(() => (div.style.opacity = "1"));
 
   activeWeather = div;
-
-
 
   /* ---------------------------------------------------
      AUTO-REMOVE
@@ -286,19 +269,16 @@ document.addEventListener("click", (e) => {
     showBubble(currentImageIndex);
 
     const mode = weatherMode[currentImageIndex];
-    showWeather(mode, e.clientX, e.clientY); /* ## ADDED */
+    showWeather(mode, e.clientX, e.clientY);  /* ## FIXED — only trigger on Add */
 
     localStorage.setItem("currentImageIndex", currentImageIndex);
   }
 
-
-  /* REMOVE → EMS level down */
+  /* REMOVE → EMS level down (no weather) */
   if (isDel) {
     currentImageIndex = Math.max(currentImageIndex - 1, 0);
     showEMS(baseImages[currentImageIndex]);
-
-    const mode = weatherMode[currentImageIndex];
-    showWeather(mode, e.clientX, e.clientY); /* ## ADDED */
+    showBubble(currentImageIndex); /* optional to keep bubble on Remove */
 
     localStorage.setItem("currentImageIndex", currentImageIndex);
   }
