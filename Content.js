@@ -35,13 +35,18 @@ function isShoppingSite() {
    Cloud Guy Level Characters and Matching Speech Bubbles sets
 --------------------------------------------------- */
 const baseImages = [
-  "ems0.png", "ems1.png", "ems2.png", "ems3.png", "ems4.png",
-  "ems5.png", "ems6.png", "ems7.png", "ems8.png", "ems9.png", "ems10.png"
+   "e1.png", "e2.png", "e3.png", "e4.png",
+  "e5.png", "e6.png", "e7.png", "e8.png",
+  "e9.png", "e10.png","e11.png", "e12.png",
+   "e13.png", "e14.png","e15.png", "e16.png",
+   "e17.png", "e18.png","e19.png", "e20.png"
 ];
 const tbImages = [
   "ems1_b.png", "ems2_b.png", "ems3_b.png", "ems4_b.png",
   "ems5_b.png", "ems6_b.png", "ems7_b.png", "ems8_b.png",
-  "ems9_b.png", "ems10_b.png"
+  "ems9_b.png", "ems10_b.png","ems11_b.png", "ems12_b.png",
+   "ems13_b.png", "ems14_b.png","ems15_b.png", "ems16_b.png",
+   "ems17_b.png", "ems18_b.png","ems19_b.png", "ems20_b.png", "ems21_b.png"
 ];
 
 let currentImageIndex = 0;
@@ -54,16 +59,27 @@ let activeBubble = null;
 --------------------------------------------------- */
 const weatherMode = {
   0: "blank",
-  1: "waterdrop",
-  2: "lightning",
+  1: "blank",
+  2: "blank",
   3: "waterdrop",
-  4: "blank",
+  4: "waterdrop",
   5: "waterdrop",
-  6: "lightning",
+  6: "blank",
   7: "blank",
   8: "waterdrop",
   9: "lightning",
-  10: "waterdrop"
+  10: "lightning",
+   11: "lightning",
+  12: "lightning",
+  13: "lightning",
+  14: "lightning",
+  15: "lightning",
+   16: "lightning",
+  17: "lightning",
+  18: "lightning",
+  19: "lightning"
+   20: "lightning"
+   
 };
 
 
